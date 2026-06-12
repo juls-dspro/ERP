@@ -28,3 +28,7 @@ sites/*/locks/
 
 # macOS files
 .DS_Store
+
+# Excluir repositorios oficiales de Frappe y ERPNext
+apps/frappe/
+apps/erpnext/
