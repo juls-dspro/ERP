@@ -301,3 +301,49 @@ Si deseas levantar un entorno completo con Docker Compose de manera rápida para
 > ```bash
 > bench --site erp.local set-config developer_mode 1
 > ```
+
+---
+
+## 👥 Colaboración y Flujo de Trabajo en Equipo
+
+Para que otro desarrollador de tu equipo se conecte y trabaje en este proyecto, debe seguir estos pasos en su entorno local recién configurado:
+
+### Paso 1: Clonar el Repositorio de Configuración
+Tu compañero debe clonar este repositorio principal (que contiene las guías y configuraciones del bench):
+```bash
+git clone https://github.com/juls-dspro/ERP.git mi-erp-bench
+cd mi-erp-bench
+```
+
+### Paso 2: Inicializar el Bench Local
+Debe inicializar la estructura del bench (que creará la carpeta virtual `env` localmente):
+```bash
+bench init --frappe-branch version-15 .
+```
+
+### Paso 3: Clonar tu Aplicación Personalizada (Laboratorio)
+Para integrar la app `laboratorio`, debe ejecutar:
+```bash
+bench get-app laboratorio https://github.com/juls-dspro/Laboratorio.git
+```
+
+### Paso 4: Crear su Sitio Local e Instalar las Apps
+Cada desarrollador maneja su propio sitio de pruebas y base de datos:
+```bash
+# Crear un sitio nuevo local (ej. erp.local)
+bench new-site erp.local
+
+# Instalar ERPNext
+bench --site erp.local install-app erpnext
+
+# Instalar la aplicación Laboratorio
+bench --site erp.local install-app laboratorio
+```
+
+### Paso 5: Sincronizar Cambios de Base de Datos
+Cada vez que bajes cambios de Git (`git pull`) que contengan nuevos DocTypes o campos creados por otros compañeros, debes sincronizar tu base de datos local ejecutando:
+```bash
+bench --site erp.local migrate
+bench --site erp.local clear-cache
+```
+Esto creará y modificará las tablas de MariaDB localmente basándose en los archivos JSON de los DocTypes.
