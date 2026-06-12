@@ -1,0 +1,30 @@
+# Frappe Bench gitignore
+
+# Environments
+env/
+.env
+
+# Node
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+logs/*
+!logs/README.md
+
+# Sites configurations and site assets
+sites/assets/
+sites/common_site_config.json
+sites/*/site_config.json
+sites/*/private/
+sites/*/public/files/
+sites/*/public/backups/
+sites/*/locks/
+
+# macOS files
+.DS_Store
