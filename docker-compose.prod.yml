@@ -47,6 +47,7 @@ services:
     volumes:
       - assets-data:/home/frappe/frappe-bench/sites/assets
       - sites-data:/home/frappe/frappe-bench/sites
+      - apps-data:/home/frappe/frappe-bench/apps
     restart: always
     depends_on:
       - db
@@ -108,10 +109,10 @@ services:
       - "443:443"
     volumes:
       - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
-      - assets-data:/var/www/html/assets:ro
-      - certbot-etc:/etc/letsencrypt:ro
-      - certbot-var:/var/lib/letsencrypt:ro
-      - webroot-certbot:/var/www/certbot:ro
+      - assets-data:/home/frappe/frappe-bench/sites/assets:ro
+      - sites-data:/home/frappe/frappe-bench/sites:ro
+      # Montamos el código del backend completo en Nginx para resolver links simbólicos
+      - apps-data:/home/frappe/frappe-bench/apps:ro
     restart: always
     depends_on:
       - backend
@@ -132,6 +133,7 @@ volumes:
   redis-socket-data:
   assets-data:
   sites-data:
+  apps-data:
   certbot-etc:
   certbot-var:
   webroot-certbot:
