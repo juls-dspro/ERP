@@ -1,0 +1,137 @@
+version: '3.7'
+
+services:
+  # Base de Datos MariaDB (sin exponer puerto al exterior por seguridad)
+  db:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: admin # Cambiar por contraseña segura en producción
+    volumes:
+      - db-data:/var/lib/mysql
+    restart: always
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+
+  # Redis
+  redis-queue:
+    image: redis:6.2-alpine
+    volumes:
+      - redis-queue-data:/data
+    restart: always
+
+  redis-cache:
+    image: redis:6.2-alpine
+    volumes:
+      - redis-cache-data:/data
+    restart: always
+
+  redis-socketio:
+    image: redis:6.2-alpine
+    volumes:
+      - redis-socket-data:/data
+    restart: always
+
+  # Servidor Backend principal (Frappe + ERPNext + Laboratorio)
+  backend:
+    image: erpnext-laboratorio:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=db
+      - REDIS_CACHE=redis-cache:6379
+      - REDIS_QUEUE=redis-queue:6379
+      - REDIS_SOCKETIO=redis-socketio:6379
+    volumes:
+      - assets-data:/home/frappe/frappe-bench/sites/assets
+      - sites-data:/home/frappe/frappe-bench/sites
+    restart: always
+    depends_on:
+      - db
+      - redis-cache
+      - redis-queue
+      - redis-socketio
+
+  # Workers
+  worker-default:
+    image: erpnext-laboratorio:latest
+    command: bench worker --queue default
+    environment:
+      - DB_HOST=db
+    volumes:
+      - sites-data:/home/frappe/frappe-bench/sites
+    restart: always
+    depends_on:
+      - backend
+
+  worker-short:
+    image: erpnext-laboratorio:latest
+    command: bench worker --queue short
+    environment:
+      - DB_HOST=db
+    volumes:
+      - sites-data:/home/frappe/frappe-bench/sites
+    restart: always
+    depends_on:
+      - backend
+
+  worker-long:
+    image: erpnext-laboratorio:latest
+    command: bench worker --queue long
+    environment:
+      - DB_HOST=db
+    volumes:
+      - sites-data:/home/frappe/frappe-bench/sites
+    restart: always
+    depends_on:
+      - backend
+
+  # Programador de tareas internas
+  scheduler:
+    image: erpnext-laboratorio:latest
+    command: bench schedule
+    environment:
+      - DB_HOST=db
+    volumes:
+      - sites-data:/home/frappe/frappe-bench/sites
+    restart: always
+    depends_on:
+      - backend
+
+  # Nginx Proxy Inverso y Servidor de Assets Estáticos
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - assets-data:/home/frappe/frappe-bench/sites/assets:ro
+      - certbot-etc:/etc/letsencrypt:ro
+      - certbot-var:/var/lib/letsencrypt:ro
+      - webroot-certbot:/var/www/certbot:ro
+    restart: always
+    depends_on:
+      - backend
+
+  # Certbot para generación y renovación automatizada de certificados SSL
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - webroot-certbot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  db-data:
+  redis-queue-data:
+  redis-cache-data:
+  redis-socket-data:
+  assets-data:
+  sites-data:
+  certbot-etc:
+  certbot-var:
+  webroot-certbot:
